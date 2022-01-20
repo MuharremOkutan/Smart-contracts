@@ -1,4 +1,3 @@
-// contracts/TokenVesting.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
@@ -9,9 +8,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-/**
- * @title TokenVesting
- */
+/// @title TokenVesting - This contract enables the storage of
+/// tokens alongside a vesting schdule that release a subset
+/// of the total amount stored on a time schduel. This implementation 
+/// also allows the owner to revoke a given schedule's tokens
+/// in the case that a beneficiary does not meet the vesting 
+/// requirement. 
+/// Original repository can be found at:
+/// https://github.com/abdelhamidbakhta/token-vesting-contracts
+/// @author Abdelhamid Bakhta - abdelhamid.bakhta@gmail.com
 contract TokenVesting is Ownable, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -218,9 +223,6 @@ contract TokenVesting is Ownable, ReentrancyGuard{
     * @param vestingScheduleId the vesting schedule identifier
     * @param amount the amount to release
     */
-
-   
-     
     function release(
         bytes32 vestingScheduleId,
         uint256 amount
@@ -327,7 +329,7 @@ contract TokenVesting is Ownable, ReentrancyGuard{
     internal
     view
     returns(uint256){
-        uint256 currentTime = getCurrentTime();
+        uint256 currentTime = block.timestamp;
         if ((currentTime < vestingSchedule.cliff) || vestingSchedule.revoked == true) {
             return 0;
         } else if (currentTime >= vestingSchedule.start.add(vestingSchedule.duration)) {
@@ -341,103 +343,5 @@ contract TokenVesting is Ownable, ReentrancyGuard{
             vestedAmount = vestedAmount.sub(vestingSchedule.released);
             return vestedAmount;
         }
-    }
-
-    function getCurrentTime()
-        internal
-        virtual
-        view
-        returns(uint256){
-        return block.timestamp;
-    }
-
-
-
-/***
-Hard coded section
- */
-
-
-
-     /*
-    * @notice Creates a new vesting schedule for a beneficiary.
-    * @param _beneficiary address of the beneficiary to whom vested tokens are transferred
-    * @param _start start time of the vesting period
-    * @param _cliff duration in seconds of the cliff in which tokens will begin to vest
-    * @param _duration duration in seconds of the period in which the tokens will vest
-    * @param _slicePeriodSeconds duration of a slice period for the vesting in seconds
-    * @param _revocable whether the vesting is revocable or not
-    * @param _amount total amount of tokens to be released at the end of the vesting
-    */
-
-      struct SlotInfo {
-        uint256 cliff;
-        uint256 slicePeriodSeconds;
-        address beneficiary_1;
-        address beneficiary_2;
-        address beneficiary_3;
-        address beneficiary_4;
-        uint256 start_1;
-        uint256 start_2;
-        uint256 start_3;
-        uint256 start_4;
-        uint256 duration_1;
-        uint256 duration_2;
-        uint256 duration_3;
-        uint256 duration_4;
-        uint256 amountTGE_1;
-        uint256 amountTGE_2;
-        uint256 amountTGE_3;
-        uint256 amountTGE_4;
-        uint256 amountDuration_1;
-        uint256 amountDuration_2;
-        uint256 amountDuration_3;
-        uint256 amountDuration_4;
-
-} 
-    function deploy() public onlyOwner {
-
-        SlotInfo memory slot;
-         
-         slot.cliff = 5259600; //2 months        
-         slot.slicePeriodSeconds = 2629800 ; //1 month
-
-         slot.beneficiary_1 = 0x83EAB5E66Ce5D7CB8292ad5d6BfDf3DF2600f0C4  ; 
-         slot.beneficiary_2 = 0x366fd8EccD9ECc19e33fB9271b3574d78994e9d5  ; 
-         slot.beneficiary_3 = 0x5f6890D89995DF256cb90040196A40b37D2375c5  ; 
-         slot.beneficiary_4 = 0x87480De940152927f9a77D14AA954758120fBb86  ; 
-
-         slot.start_1 = 1643241600; //2022-01-27 00:00:00  GMT+0
-         slot.start_2 = 1643241600;
-         slot.start_3 = 1643241600;
-         slot.start_4 = 1643241600;
-
-         slot.duration_1 = 26298000 ; //10 m
-         slot.duration_2 = 21038400 ; //8 m
-         slot.duration_3 = 21038400 ; //8 m
-         slot.duration_4 = 15778800 ; //6 m
-
-         slot.amountTGE_1 = 0.05*75*10**24;  //5%*75*10**24
-         slot.amountTGE_2 = 0.075*150*10**24;
-         slot.amountTGE_3 = 0.1* 175*10*24;
-         slot.amountTGE_4 = 0.15*25*10**24;
-
-         slot.amountDuration_1 = 10*0.095*75*10**24 ;//9.5%*10(m)*75*10**25
-         slot.amountDuration_2 = 8* 0.115625*150*10**24 ;
-         slot.amountDuration_3 = 8* 0.1125*175*10**24 ;
-         slot.amountDuration_4 = 6 *0.17*25*10**24 ;
-
-//ROUND1
-                createVestingSchedule(slot.beneficiary_1,  slot.start_1 ,slot.cliff ,  slot.duration_1, slot.slicePeriodSeconds,true,slot.amountDuration_1);
-                _token.safeTransfer(slot.beneficiary_1,slot.amountTGE_1);
-//ROUND2      
-                createVestingSchedule(slot.beneficiary_2,  slot.start_2 ,slot.cliff,  slot.duration_2 , slot.slicePeriodSeconds,true,slot.amountDuration_2);
-                 _token.safeTransfer(slot.beneficiary_2,slot.amountTGE_2 );
-//ROUND3
-                createVestingSchedule(slot.beneficiary_3,  slot.start_3 ,slot.cliff, slot.duration_3, slot.slicePeriodSeconds,true,slot.amountDuration_3);
-                 _token.safeTransfer(slot.beneficiary_3,slot.amountTGE_3 );
- //ROUND4
-                createVestingSchedule(slot.beneficiary_4,  slot.start_4 ,slot.cliff, slot.duration_4, slot.slicePeriodSeconds,true,slot.amountDuration_4);
-                 _token.safeTransfer(slot.beneficiary_4,slot.amountTGE_4 );    
     }
 }
