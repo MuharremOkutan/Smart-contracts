@@ -1,9 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-// this contract is taking the amount paid and divide per price 
-//not like oppenzeppelin (mul => div)
-
 import"@openzeppelin/contracts/utils/math/SafeMath.sol";
 import"./Crowdsale.sol";
 

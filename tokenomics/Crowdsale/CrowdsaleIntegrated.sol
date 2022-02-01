@@ -1,19 +1,17 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-// this contract is taking the amount paid and divide per price 
-//not like oppenzeppelin (mul => div)
-
 import"@openzeppelin/contracts/utils/math/SafeMath.sol";
 import"@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CrowdSale {
+contract Crowdsale is Ownable  {
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     // The token being sold
-    IERC20 public _token;
+    IERC20 immutable public _token;
 
     // Address where funds are collected
     address payable public _wallet;
@@ -25,18 +23,15 @@ contract CrowdSale {
     // Amount of wei raised
     uint256 private _weiRaised;
     
-    
+    // Opening and closing time
     uint256 public openingTime;
     uint256 public closingTime;
 
-//cap for crowdsale
+    //cap for crowdsale
     uint256 public _maxCap;
 
-//tokens per clients
+    //tokens per clients
     mapping(address => uint256) internal _contributions;
-
-    //owner
-    address owner ;
 
     /**
      * Event for token purchase logging
@@ -54,14 +49,13 @@ contract CrowdSale {
         require(_openingTime >= block.timestamp, "time is greater than opening time");
         require(_closingTime >= _openingTime, "closingTime should be lesss than openingtime");
         require(_cap > 0);
-        _maxCap = _cap;
-        owner = msg.sender ;
-
+        
         _rate = rate;
         _wallet = wallet;
         _token = token;
         openingTime = _openingTime;
         closingTime = _closingTime;
+        _maxCap = _cap;
     }
 
  
@@ -74,7 +68,6 @@ contract CrowdSale {
         buyTokens(msg.sender);
     }
 
-
         /**
      * @dev Returns the cap of a specific beneficiary.
      * @return Current cap for individual beneficiary
@@ -85,20 +78,16 @@ contract CrowdSale {
       /**
      * @dev set cap of a specific beneficiary.
      */
-        function setCap(uint256 new_cap) public  {
-        require(owner == msg.sender);
+        function SetCap(uint256 new_cap) public onlyOwner   {
         _maxCap =new_cap;
     }
-
-
-
 
     /**
      * @dev Returns the amount contributed so far by a specific beneficiary.
      * @param beneficiary Address of contributor
      * @return Beneficiary contribution so far
      */
-    function getContribution(address beneficiary)
+    function getUserContribution(address beneficiary)
         public
         view
         returns (uint256)
@@ -124,9 +113,29 @@ contract CrowdSale {
     /**
      * @return the number of token units a buyer gets per wei.
      */
-    function rate() public view returns (uint256) {
+    function GetRate() public view returns (uint256) {
         return _rate;
     }
+
+       /**
+     * @dev set new rate .
+     */
+    function SetRate(uint256 new_rate) public onlyOwner {
+        _rate =new_rate;
+    }
+
+       /**
+     * @dev set new Opening,closing time .
+     */
+
+    function SetOpeningTime(uint256 new_openingTime) public onlyOwner {
+        openingTime =new_openingTime;
+    }
+
+    function SetClosingTime(uint256 new_closingTime) public onlyOwner {
+        closingTime =new_closingTime;
+    }
+
 
     /**
      * @return the amount of wei raised.
@@ -168,10 +177,11 @@ contract CrowdSale {
     function _preValidatePurchase(address beneficiary, uint256 weiAmount) internal virtual onlyWhileOpen {
         require(beneficiary != address(0), "Crowdsale: beneficiary is the zero address");
         require(weiAmount != 0, "Crowdsale: weiAmount is 0");
-        require(
-            _contributions[beneficiary].add(_getTokenAmount(weiAmount)) <= _maxCap,
+                require(
+            _contributions[beneficiary].add(weiAmount) <= _maxCap,
             "IndividuallyCappedCrowdsale: beneficiary's cap exceeded"
         );
+
 
         this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
     }
@@ -213,10 +223,8 @@ contract CrowdSale {
      * @param weiAmount Value in wei involved in the purchase
      */
     function _updatePurchasingState(address beneficiary, uint256 weiAmount) internal {
-        // solhint-disable-previous-line no-empty-blocks
-                _contributions[beneficiary] = _contributions[beneficiary].add(_getTokenAmount(
-            weiAmount)
-        );
+                  _contributions[beneficiary] = _contributions[beneficiary].add(
+            weiAmount);
     }
 
     /**
@@ -225,7 +233,7 @@ contract CrowdSale {
      * @return Number of tokens that can be purchased with the specified _weiAmount
      */
     function _getTokenAmount(uint256 weiAmount) internal view returns (uint256) {
-        return weiAmount.div(_rate);
+        return weiAmount.mul(_rate); 
     }
 
       /**
