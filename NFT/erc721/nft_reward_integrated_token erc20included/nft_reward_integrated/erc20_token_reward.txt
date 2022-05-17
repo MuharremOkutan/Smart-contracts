@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.2;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyToken is ERC20, Ownable {
+
+    address nft_contract ;
+
+    constructor() ERC20("MyToken", "MTK") {}
+
+/*
+*to restrict minting for our contract only
+*/
+    function owner(address _nftContract) public onlyOwner  {        
+         nft_contract = _nftContract ;
+    }
+
+/*
+*normal minting function
+*/
+    function mint(address to, uint256 amount) public   {   
+        require(msg.sender ==nft_contract, "Only NFT_contract allowed");    
+        _mint(to, amount);
+    }
+}

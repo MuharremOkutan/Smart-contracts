@@ -1,0 +1,155 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.11;
+
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+interface ERC20Token {
+function mint(address owner, uint amount) external;
+function balanceOf(address owner) external returns (uint256);
+}
+
+contract NFT is ERC721URIStorage, Ownable, ReentrancyGuard {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+///
+using SafeMath for uint256;
+ event RewardsTokenSet(address token);
+ event RewardsSet(uint32 start, uint32 end, uint256 rate);
+ event Claimed(address receiver, uint256 claimed);
+ event createdToken(address indexed buyer);
+
+        /// @dev user rewards
+    struct UserRewards {
+    address  beneficiary;                               //rewards beneficiary
+    uint256  rewardCumulated;                           // Accumulated rewards for the user until the rewardLastUpdate
+    uint256  rewardLastUpdate;                          // RewardsPerToken the last time the user rewards were updated
+    }
+
+/// @dev rewards period
+  struct RewardsPeriod {
+        uint32 start;                                   // Start time for the current rewardsToken schedule
+        uint32 end;                                     // End time for the current rewardsToken schedule
+        uint96 rate;                                    // rate for token
+    }
+
+/// @dev info about token 
+    struct RewardsPerToken {
+        uint256 accumulated;                            // Accumulated tokens minted
+        uint256 lastUpdated;                            // Last time the rewards was updated
+    }
+
+
+     RewardsPeriod public rewardsPeriod; 
+     RewardsPerToken public rewardsPerToken; 
+     mapping (address => UserRewards) public rewards;       
+
+    address public ERC20Address ;
+
+    constructor() ERC721("Metaverse", "METT") {}
+
+        /// @dev Return the earliest of two timestamps
+    function earliest(uint32 x, uint32 y) internal pure returns (uint32 z) {
+        z = (x < y) ? x : y;
+    }
+
+
+        /// @dev set token once
+    function setToken(address _tokenRewards) public onlyOwner  {
+        require(ERC20Address == address(0x0), "Token already set up");
+        ERC20Address = _tokenRewards;
+        emit RewardsTokenSet(_tokenRewards);
+    }
+
+        /// @dev Set a rewards schedule
+    function setRewards(uint32 start, uint32 end, uint96 rate)
+        public
+        onlyOwner
+    {
+        require(start <= end,"Incorrect input");
+        require(rate > 0, "Rate has to be over than 0");
+        require(ERC20Address != address(0),"Rewards token not set");
+        // A new rewards program can be set if one is not running
+        require(_now() < rewardsPeriod.start || _now()  > rewardsPeriod.end,"Ongoing rewards");
+        rewardsPeriod.start = start;
+        rewardsPeriod.end = end;
+        rewardsPeriod.rate = rate;
+        emit RewardsSet(start, end, rate);
+    }
+
+
+//calculate time
+//amount of nft bought
+   function calculateTimePassed(address _user, uint256 amount) internal  
+   {
+        RewardsPeriod memory rewardsPeriod_ = rewardsPeriod;
+        UserRewards memory userRewards_ = rewards[_user];
+
+        if (_now() < rewardsPeriod_.start) return;
+        if (_now() >= rewardsPeriod_.end) return; 
+        
+        if (_now() - userRewards_.rewardLastUpdate > 1 minutes){
+            uint256 reward = amount* (_now() - userRewards_.rewardLastUpdate)*rewardsPeriod.rate/60;
+
+            userRewards_.beneficiary = _user;
+            userRewards_.rewardCumulated.add(reward);
+            userRewards_.rewardLastUpdate=_now();
+            rewards[_user] = userRewards_;
+        }
+   }
+
+
+//transfer claim tokens
+   function claim () public nonReentrant {
+       UserRewards memory userRewards_ = rewards[msg.sender];
+       RewardsPerToken memory rewardsPerToken_ = rewardsPerToken;
+
+       require (userRewards_.beneficiary == msg.sender, "You didn't buy any nft") ;
+       uint256 NFT_balance = ERC20Token(ERC20Address).balanceOf(msg.sender);
+       uint256 rewardCumulated = userRewards_.rewardCumulated;
+       calculateTimePassed(msg.sender,NFT_balance );
+       ERC20Token(ERC20Address).mint(msg.sender, rewardCumulated);
+       //update user rewards
+        userRewards_.beneficiary = msg.sender;
+        userRewards_.rewardCumulated=0;
+        userRewards_.rewardLastUpdate=_now();
+        rewards[msg.sender] = userRewards_;
+        //update rewardsPerToken
+        rewardsPerToken_.accumulated.add(rewardCumulated) ;
+        rewardsPerToken_.lastUpdated= _now() ;
+
+
+       emit Claimed(msg.sender, rewardCumulated);
+   }
+
+//mint
+    function createToken(string memory tokenURI) public nonReentrant returns (uint) {
+        UserRewards memory userRewards_ = rewards[msg.sender];
+        RewardsPerToken memory rewardsPerToken_ = rewardsPerToken;
+        _tokenIds.increment();
+        uint256 newItemId = _tokenIds.current();
+        _mint(msg.sender, newItemId);
+        _setTokenURI(newItemId, tokenURI);
+        ///
+        userRewards_.beneficiary = msg.sender;
+        userRewards_.rewardCumulated=rewardsPeriod.rate;
+        userRewards_.rewardLastUpdate=_now();
+        rewards[msg.sender] = userRewards_;
+        rewardsPerToken_.lastUpdated= _now() ;
+        emit createdToken(msg.sender);
+        
+//
+        return newItemId;
+    }
+
+        //now date
+    function _now () internal view returns (uint){
+        return uint32(block.timestamp) ;    
+    }
+
+
+}

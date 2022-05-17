@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: MIT
+//edited by LAx
+/*
+* erc1155 with multiple rates, multiple rarity, multiple supply
+*/
+
+
 pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts@4.4.2/token/ERC1155/ERC1155.sol";

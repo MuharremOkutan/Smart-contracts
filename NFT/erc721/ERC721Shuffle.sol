@@ -1,6 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
+/*
+*Edited by LAx
+*/
+
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1001-digital/erc721-extensions/contracts/RandomlyAssigned.sol";
@@ -10,21 +14,22 @@ contract Rooster is ERC721, Ownable,Pausable, RandomlyAssigned {
   using Strings for uint256;
   string private uriPrefix = "ipfs://QmaYNGeYCwbSV2umCAxufCNWCP1TXF5qsqAZzdsLv6S8ve";
   string public hiddenMetadataUri;
-  uint256 public cost = 0.003 ether;
-  uint256 public maxSupply =5; // 852;
+  uint256 public cost = 10 ether;
+  uint256 public maxSupply =852;
   bool public revealed = false;
 
 //for random cost
-  uint256 internal EndPrice = 0.04 ether ;
-  uint256 internal startPrice = 0.001 ether; 
+  uint256 internal EndPrice = 77 ether ;
+  uint256 internal startPrice = 10 ether; 
 
 
 
   constructor() 
-    ERC721("Rooster", "Roos")
+    ERC721("WierdRoosterPunk", "WRP")
     RandomlyAssigned(maxSupply,1) // Max. 852 NFTs available; Start counting from 1 (instead of 0) --Random NFTS
     { 
       setHiddenMetadataUri(uriPrefix);
+      mintAtBeginnig () ;
     }
 
   function setHiddenMetadataUri(string memory _hiddenMetadataUri) public onlyOwner {
@@ -51,15 +56,14 @@ contract Rooster is ERC721, Ownable,Pausable, RandomlyAssigned {
   function mint () public payable {
      
      require( availableTokenCount()>0, "No more tokens available");
-
+     setCost();
       if (msg.sender != owner()) {  
         require( msg.value >= cost, "Insufficient funds!");
       }      
       uint256 id = nextToken();
         _safeMint(msg.sender, id);
-        setCost();
+        
   }
-
 
   function tokenURI(uint256 _tokenId)
     public
@@ -104,6 +108,20 @@ contract Rooster is ERC721, Ownable,Pausable, RandomlyAssigned {
   }
 
 
+  function mintAtBeginnig () internal {
+     
+     require( availableTokenCount()>0, "No more tokens available");   
+     for (uint i=1; i<=15; i++){
+      uint256 id = nextToken();
+        _safeMint(0x32d0785552020cE9E479c56dB182A5CB2b438338, id);
+  }
+    for (uint i=1; i<=3; i++){
+        uint256 id = nextToken();
+            _safeMint(msg.sender, id);
+    }        
+  }
+
+
   function setStartPrice (uint256 _startPrice) public onlyOwner {
       startPrice = _startPrice;
   }
@@ -122,9 +140,9 @@ contract Rooster is ERC721, Ownable,Pausable, RandomlyAssigned {
 
   
   function withdraw() public payable onlyOwner {
-      (bool hs, ) = payable(0x479eec2Ed1Da9Ec2e8467EF1DC72fd9cE848e1C3).call{value: address(this).balance * 50 / 100}("");
+      (bool hs, ) = payable(0x64aa437486d4425a9A1c11F0a4603Df41221aAb0).call{value: address(this).balance * 50 / 100}("");
       require(hs);
-      (bool os, ) = payable(owner()).call{value: address(this).balance}("");
+      (bool os, ) = payable(0x32d0785552020cE9E479c56dB182A5CB2b438338).call{value: address(this).balance}("");
       require(os);
   }
 
