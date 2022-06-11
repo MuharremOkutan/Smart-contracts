@@ -7,6 +7,7 @@ import 'erc721a/contracts/ERC721A.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract TundraWolves is ERC721A, Ownable, ReentrancyGuard {
 
@@ -40,31 +41,31 @@ contract TundraWolves is ERC721A, Ownable, ReentrancyGuard {
     _safeMint(_msgSender(), _mintAmount);
   }
   
-  function walletOfOwner(address _owner) public view returns (uint256[] memory) {
-    uint256 ownerTokenCount = balanceOf(_owner);
-    uint256[] memory ownedTokenIds = new uint256[](ownerTokenCount);
-    uint256 currentTokenId = _startTokenId();
-    uint256 ownedTokenIndex = 0;
-    address latestOwnerAddress;
+  // function walletOfOwner(address _owner) public view returns (uint256[] memory) {
+  //   uint256 ownerTokenCount = balanceOf(_owner);
+  //   uint256[] memory ownedTokenIds = new uint256[](ownerTokenCount);
+  //   uint256 currentTokenId = _startTokenId();
+  //   uint256 ownedTokenIndex = 0;
+  //   address latestOwnerAddress;
 
-    while (ownedTokenIndex < ownerTokenCount && currentTokenId <= maxSupply) {
-      TokenOwnership memory ownership = _ownerships[currentTokenId];
+  //   while (ownedTokenIndex < ownerTokenCount && currentTokenId <= maxSupply) {
+  //     TokenOwnership memory ownership = _ownerships[currentTokenId];
 
-      if (!ownership.burned && ownership.addr != address(0)) {
-        latestOwnerAddress = ownership.addr;
-      }
+  //     if (!ownership.burned && ownership.addr != address(0)) {
+  //       latestOwnerAddress = ownership.addr;
+  //     }
 
-      if (latestOwnerAddress == _owner) {
-        ownedTokenIds[ownedTokenIndex] = currentTokenId;
+  //     if (latestOwnerAddress == _owner) {
+  //       ownedTokenIds[ownedTokenIndex] = currentTokenId;
 
-        ownedTokenIndex++;
-      }
+  //       ownedTokenIndex++;
+  //     }
 
-      currentTokenId++;
-    }
+  //     currentTokenId++;
+  //   }
 
-    return ownedTokenIds;
-  }
+  //   return ownedTokenIds;
+  // }
 
   function _startTokenId() internal view virtual override returns (uint256) {
         return 1;
