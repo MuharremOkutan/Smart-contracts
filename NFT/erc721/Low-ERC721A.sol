@@ -5,14 +5,10 @@ pragma solidity >=0.8.9 <0.9.0;
 
 import 'erc721a/contracts/ERC721A.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 contract contractName is ERC721A, Ownable, ReentrancyGuard {
 
-
-  bytes32 public merkleRoot = 'insert root';
-  mapping(address => bool) public whitelistClaimed;
 
   string public uriPrefix = 'ipfs://replace with base uri/';
   string constant uriSuffix = '.json';
@@ -21,39 +17,39 @@ contract contractName is ERC721A, Ownable, ReentrancyGuard {
   uint256 public maxSupply = 8008;
   uint256 public maxMintAmountPerTx = 5;
   bool public paused = true;
-  bool public whitelistMintEnabled = false;
-  bool public revealed = true;
+  bool public revealed = false;
+
+
+  error ContractPaused();
+  error TokenNotExisting();
+  error MaxSupply();
+  error InvalidMintAmount();
+  error InsufficientFund();
+
 
   constructor(
     string memory _tokenName,
     string memory _tokenSymbol,
     string memory _hiddenMetadataUri
-  ) ERC721A(_tokenName, _tokenSymbol) {setHiddenMetadataUri(_hiddenMetadataUri);}
+  ) ERC721A(_tokenName, _tokenSymbol) {
+      setHiddenMetadataUri(_hiddenMetadataUri);
+      }
+
 
   modifier mintCompliance(uint256 _mintAmount) {
-    require(_mintAmount > 0 && _mintAmount <= maxMintAmountPerTx, 'Invalid mint amount!');
-    require(totalSupply() + _mintAmount <= maxSupply, 'Max supply exceeded!');
+    if (_mintAmount < 0 || _mintAmount > maxMintAmountPerTx) revert InvalidMintAmount();
+    if (totalSupply() + _mintAmount > maxSupply) revert MaxSupply();
     _;
   }
 
   modifier mintPriceCompliance(uint256 _mintAmount) {
-    require(msg.value >= cost * _mintAmount, 'Insufficient funds!');
+    if (msg.value < cost * _mintAmount) revert InsufficientFund();
     _;
   }
 
-  function whitelistMint(uint256 _mintAmount, bytes32[] calldata _merkleProof) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
-    require(whitelistMintEnabled, 'The whitelist sale is not enabled!');
-    require(!whitelistClaimed[_msgSender()], 'Address already claimed!');
-    bytes32 leaf = keccak256(abi.encodePacked(_msgSender()));
-    require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), 'Invalid proof!');
-
-    whitelistClaimed[_msgSender()] = true;
-    _safeMint(_msgSender(), _mintAmount);
-  }
 
   function mint(uint256 _mintAmount) public payable mintCompliance(_mintAmount) mintPriceCompliance(_mintAmount) {
-    require(!paused, 'The contract is paused!');
-
+   if (paused) revert ContractPaused();
     _safeMint(_msgSender(), _mintAmount);
   }
   
@@ -66,7 +62,8 @@ contract contractName is ERC721A, Ownable, ReentrancyGuard {
     }
 
   function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-    require(_exists(_tokenId), 'ERC721Metadata: URI query for nonexistent token');
+    if (!_exists(_tokenId)) revert TokenNotExisting();
+    // require(_exists(_tokenId), 'ERC721Metadata: URI query for nonexistent token');
 
     if (revealed == false) {
       return hiddenMetadataUri;
@@ -78,8 +75,8 @@ contract contractName is ERC721A, Ownable, ReentrancyGuard {
         : '';
   }
 
-  function setRevealed(bool _state) public onlyOwner {
-    revealed = _state;
+  function setRevealed() public onlyOwner {
+    revealed = !revealed;
   }
 
   function setCost(uint256 _cost) public onlyOwner {
@@ -102,16 +99,8 @@ contract contractName is ERC721A, Ownable, ReentrancyGuard {
 //     uriSuffix = _uriSuffix;
 //   }
 
-  function setPaused(bool _state) public onlyOwner {
-    paused = _state;
-  }
-
-  function setMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
-    merkleRoot = _merkleRoot;
-  }
-
-  function setWhitelistMintEnabled(bool _state) public onlyOwner {
-    whitelistMintEnabled = _state;
+  function setPaused() public onlyOwner {
+    paused = !paused;
   }
 
   function withdraw() public onlyOwner nonReentrant {
